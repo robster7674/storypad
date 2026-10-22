@@ -31,8 +31,6 @@ abstract class BaseAnalyticsEventAdaptor {
 
   Future<void> logLogin({required String loginMethod});
 
-  Future<void> logSearchEvent({required String searchTerm});
-
   // ---------------------------------------------------------------------------
   // High-level methods — implemented once here, shared by all adaptors
   // ---------------------------------------------------------------------------
@@ -75,9 +73,8 @@ abstract class BaseAnalyticsEventAdaptor {
     return logScreenView(screenClass: 'LicensePage', screenName: 'License');
   }
 
-  Future<void> logSearch({required String searchTerm}) {
-    return logSearchEvent(searchTerm: searchTerm);
-  }
+  // The query is not logged: it is text from the user's own stories.
+  Future<void> logSearch() => logEvent(sanitizeEventName('search'));
 
   Future<void> logSyncBackup() => logEvent(sanitizeEventName('sync_backup'));
 
@@ -91,12 +88,12 @@ abstract class BaseAnalyticsEventAdaptor {
 
   Future<void> logSignInWithGoogle() => logLogin(loginMethod: 'google');
 
-  Future<void> logOpenLinkInCustomTab({required String url}) {
-    return logEvent(sanitizeEventName('open_custom_tab'), parameters: sanitizeParameters({'url': url}));
+  Future<void> logOpenLinkInCustomTab({required Uri uri}) {
+    return logEvent(sanitizeEventName('open_custom_tab'), parameters: urlParameters(uri));
   }
 
-  Future<void> logLaunchUrl({required String url}) {
-    return logEvent(sanitizeEventName('launch_url'), parameters: sanitizeParameters({'url': url}));
+  Future<void> logLaunchUrl({required Uri uri}) {
+    return logEvent(sanitizeEventName('launch_url'), parameters: urlParameters(uri));
   }
 
   Future<void> logSubmitRedditPost({required String target}) {
@@ -403,6 +400,14 @@ abstract class BaseAnalyticsEventAdaptor {
     assert(!name.startsWith('google_'));
     assert(!name.startsWith('ga_'));
     return name;
+  }
+
+  /// Scheme and host only, so paths and queries (user content) are never logged.
+  Map<String, Object>? urlParameters(Uri uri) {
+    return sanitizeParameters({
+      'scheme': uri.scheme.isEmpty ? null : uri.scheme,
+      'host': uri.host.isEmpty ? null : uri.host,
+    });
   }
 
   /// Filters out null values and coerces numeric strings to [num].

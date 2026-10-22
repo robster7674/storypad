@@ -18,12 +18,14 @@ class UrlOpenerService {
   static Future<bool> launchUrlString(
     String url, {
     bool deeplinkOnly = false,
+    bool logAnalytics = true,
   }) {
     final uri = Uri.parse(url);
 
     return launchUrl(
       uri,
       mode: deeplinkOnly ? launcher.LaunchMode.externalNonBrowserApplication : launcher.LaunchMode.platformDefault,
+      logAnalytics: logAnalytics,
     );
   }
 
@@ -31,6 +33,7 @@ class UrlOpenerService {
   static Future<bool> launchUrl(
     Uri uri, {
     launcher.LaunchMode mode = launcher.LaunchMode.platformDefault,
+    bool logAnalytics = true,
   }) async {
     if (await launcher.canLaunchUrl(uri)) {
       bool launched = false;
@@ -47,10 +50,8 @@ class UrlOpenerService {
         debugPrint('$UrlOpenerService.launchUrl failed $e');
       }
 
-      if (launched) {
-        AnalyticsService.instance.logLaunchUrl(
-          url: uri.toString(),
-        );
+      if (launched && logAnalytics) {
+        AnalyticsService.instance.logLaunchUrl(uri: uri);
       }
 
       return launched;
@@ -59,25 +60,26 @@ class UrlOpenerService {
     }
   }
 
+  /// Pass [logAnalytics] false for URLs that come from user content (links in
+  /// stories, a story's location), so they are never sent to analytics.
   static Future<void> openInCustomTab(
     BuildContext context,
     String url, {
     bool prefersDeepLink = false,
+    bool logAnalytics = true,
   }) async {
     return SpAppLockWrapper.disableAppLockIfHas(
       context,
       callback: () async {
         if (!kIsWeb || !Platform.isIOS || !Platform.isAndroid) {
-          await launchUrlString(url, deeplinkOnly: prefersDeepLink);
+          await launchUrlString(url, deeplinkOnly: prefersDeepLink, logAnalytics: logAnalytics);
           return;
         }
 
         Color toolbarColor = Theme.of(context).appBarTheme.backgroundColor ?? Colors.white;
         Color foregroundColor = Theme.of(context).appBarTheme.foregroundColor ?? toolbarColor.darken(0.5);
 
-        AnalyticsService.instance.logOpenLinkInCustomTab(
-          url: url,
-        );
+        if (logAnalytics) AnalyticsService.instance.logOpenLinkInCustomTab(uri: Uri.parse(url));
 
         await custom_tab.launchUrl(
           Uri.parse(url),
@@ -119,7 +121,7 @@ class UrlOpenerService {
 
     if (!context.mounted) return;
     if (result == "open") {
-      UrlOpenerService.openInCustomTab(context, url);
+      UrlOpenerService.openInCustomTab(context, url, logAnalytics: false);
     } else if (result == "copy") {
       Clipboard.setData(ClipboardData(text: url));
       MessengerService.of(context).showSnackBar(url, showAction: false);

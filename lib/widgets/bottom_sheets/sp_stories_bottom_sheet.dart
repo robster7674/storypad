@@ -102,7 +102,7 @@ class _MapAppOpenerButton extends StatelessWidget {
         }
 
         if (url != null) {
-          UrlOpenerService.openInCustomTab(context, url, prefersDeepLink: prefersDeepLink);
+          UrlOpenerService.openInCustomTab(context, url, prefersDeepLink: prefersDeepLink, logAnalytics: false);
         }
       },
     );
