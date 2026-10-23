@@ -13,7 +13,11 @@ enum BackupServiceType {
   // stable, cross-device identity — same aliasing scheme as Drive/iCloud.
   // See DropboxUserObject.globalId.
   dropbox(id: 'dropbox', displayName: 'Dropbox', hasGlobalUserId: true),
-  nextcloud(id: 'nextcloud', displayName: 'Nextcloud', hasGlobalUserId: true);
+  nextcloud(id: 'nextcloud', displayName: 'Nextcloud', hasGlobalUserId: true),
+  // An S3 access key identifies a credential, not a person, so unlike the
+  // account-based services above it can't be aliased into RevenueCat identity
+  // (see S3UserObject.globalId).
+  s3(id: 's3', displayName: 'S3', hasGlobalUserId: false);
 
   final String id;
   final String displayName;
@@ -23,8 +27,9 @@ enum BackupServiceType {
   bool get icloudService => this == icloud;
   bool get dropboxService => this == dropbox;
   bool get nextcloudService => this == nextcloud;
+  bool get s3Service => this == s3;
 
-  /// Only Google Drive syncs for free — Nextcloud and iCloud require Pro.
+  /// Only Google Drive syncs for free — Nextcloud, iCloud, Dropbox and S3 require Pro.
   bool get isProOnly => this != google_drive;
 
   const BackupServiceType({
@@ -46,6 +51,8 @@ enum BackupServiceType {
         return SpIcons.icloud;
       case BackupServiceType.dropbox:
         return SpIcons.dropbox;
+      case BackupServiceType.s3:
+        return SpIcons.s3;
     }
   }
 }

@@ -96,6 +96,27 @@ class CloudFileObject {
     );
   }
 
+  /// S3 objects have no separate stable ID, so the full object [key] is used as
+  /// [id] (same idea as Nextcloud's path). Takes plain values rather than the
+  /// `minio` listing/stat types so this model doesn't depend on the S3 client;
+  /// S3 exposes a single last-modified time, used for both timestamps.
+  factory CloudFileObject.fromS3({
+    required String key,
+    int? sizeInBytes,
+    DateTime? lastModified,
+    bool trashed = false,
+  }) {
+    return CloudFileObject(
+      fileName: key.substring(key.lastIndexOf('/') + 1),
+      id: key,
+      description: null,
+      sizeInBytes: sizeInBytes,
+      createdAt: lastModified,
+      modifiedAt: lastModified,
+      trashed: trashed,
+    );
+  }
+
   factory CloudFileObject.fromLegacyStoryPad(drive.File file) {
     return CloudFileObject(
       fileName: file.name,

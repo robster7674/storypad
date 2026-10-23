@@ -20,6 +20,7 @@ import 'package:storypad/core/services/backups/google_drive_cloud_service.dart';
 import 'package:storypad/core/services/backups/google_drive_linux_cloud_service.dart';
 import 'package:storypad/core/services/backups/icloud_cloud_service.dart';
 import 'package:storypad/core/services/backups/nextcloud_cloud_service.dart';
+import 'package:storypad/core/services/backups/s3_cloud_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_images_uploader_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_importer_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_latest_checker_service.dart';
@@ -37,6 +38,7 @@ import 'package:storypad/providers/backup_sync_state_store.dart';
 import 'package:storypad/providers/in_app_purchase_provider.dart';
 import 'package:storypad/views/home/home_view.dart';
 import 'package:storypad/widgets/bottom_sheets/sp_connect_nextcloud_sheet.dart';
+import 'package:storypad/widgets/bottom_sheets/sp_connect_s3_sheet.dart';
 import 'package:storypad/widgets/bottom_sheets/sp_icloud_settings_sheet.dart';
 
 class BackupProvider extends ChangeNotifier with DebounchedCallback {
@@ -94,6 +96,7 @@ class BackupProvider extends ChangeNotifier with DebounchedCallback {
       internetChecker: InternetCheckerService(),
       googleDriveService: _createGoogleDriveService(),
       nextcloudService: NextcloudCloudService(),
+      s3Service: S3CloudService(),
       icloudService: _createICloudService(),
       dropboxService: DropboxCloudService(),
       importHistoryStorage: BackupImportHistoryStorage(),
@@ -304,6 +307,12 @@ class BackupProvider extends ChangeNotifier with DebounchedCallback {
       return;
     }
 
+    // Same for S3: a multi-field form (endpoint, bucket, keys), no OAuth.
+    if (serviceType == BackupServiceType.s3) {
+      await const SpConnectS3Sheet().show(context: context);
+      return;
+    }
+
     final result = await repository.signIn(serviceType);
 
     // iCloud has no OAuth/credential flow — signIn() just re-checks live OS
@@ -396,6 +405,43 @@ class BackupProvider extends ChangeNotifier with DebounchedCallback {
       _lastDbUpdatedAtByYear = null;
     } else if (result.error != null) {
       AppLogger.d('Nextcloud connect failed: ${result.error!.message}');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.error!.message)),
+        );
+      }
+    }
+
+    notifyListeners();
+    return result.isSuccess == true;
+  }
+
+  Future<bool> connectS3(
+    BuildContext context, {
+    required String endpoint,
+    required String region,
+    required String bucket,
+    required String accessKeyId,
+    required String secretAccessKey,
+    bool pathStyle = true,
+    String? folderName,
+  }) async {
+    final result = await repository.connectS3(
+      endpoint: endpoint,
+      region: region,
+      bucket: bucket,
+      accessKeyId: accessKeyId,
+      secretAccessKey: secretAccessKey,
+      pathStyle: pathStyle,
+      folderName: folderName,
+    );
+
+    if (result.isSuccess == true) {
+      _syncState.onConnectionChecked({BackupServiceType.s3: BackupConnectionStatus.readyToSync});
+      _lastSyncedAtByYear = null;
+      _lastDbUpdatedAtByYear = null;
+    } else if (result.error != null) {
+      AppLogger.d('S3 connect failed: ${result.error!.message}');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.error!.message)),

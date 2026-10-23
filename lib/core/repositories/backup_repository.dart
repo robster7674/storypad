@@ -16,9 +16,11 @@ import 'package:storypad/core/objects/dropbox_user_object.dart';
 import 'package:storypad/core/objects/google_user_object.dart';
 import 'package:storypad/core/objects/icloud_user_object.dart';
 import 'package:storypad/core/objects/nextcloud_user_object.dart';
+import 'package:storypad/core/objects/s3_user_object.dart';
 import 'package:storypad/core/services/backups/backup_cloud_service.dart';
 import 'package:storypad/core/services/backups/dropbox_cloud_service.dart';
 import 'package:storypad/core/services/backups/nextcloud_cloud_service.dart';
+import 'package:storypad/core/services/backups/s3_cloud_service.dart';
 import 'package:storypad/core/services/backups/backup_service_type.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_sync_message.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_sync_messenger.dart';
@@ -87,6 +89,7 @@ class BackupRepository {
   final RestoreBackupService restoreService;
   final BackupCloudService googleDriveService;
   final NextcloudCloudService nextcloudService;
+  final S3CloudService s3Service;
 
   /// Null on platforms where iCloud doesn't conceptually exist (Android,
   /// Linux, Windows) — unlike Drive's Linux stub, there's no always-registered
@@ -110,6 +113,7 @@ class BackupRepository {
   BackupRepository({
     required this.googleDriveService,
     required this.nextcloudService,
+    required this.s3Service,
     required this.icloudService,
     required this.dropboxService,
     required this.restoreService,
@@ -130,6 +134,7 @@ class BackupRepository {
   Future<void> initialize() async {
     await googleDriveService.initialize();
     await nextcloudService.initialize();
+    await s3Service.initialize();
     await icloudService?.initialize();
     await dropboxService.initialize();
   }
@@ -137,6 +142,7 @@ class BackupRepository {
   // currentUser & isSignedIn are load in initializer - before rendering UI.
   GoogleUserObject? get currentGoogleUser => googleDriveService.currentUser as GoogleUserObject?;
   NextcloudUserObject? get currentNextcloudUser => nextcloudService.currentUser;
+  S3UserObject? get currentS3User => s3Service.currentUser;
   ICloudUserObject? get currentICloudUser => icloudService?.currentUser as ICloudUserObject?;
   DropboxUserObject? get currentDropboxUser => dropboxService.currentUser;
   bool get isSignedIn => availableUsers.isNotEmpty;
@@ -182,6 +188,42 @@ class BackupRepository {
     }
   }
 
+  /// S3's auth is a multi-field form (endpoint, region, bucket, access key,
+  /// secret) rather than a no-argument OAuth flow, so the connect sheet calls
+  /// this directly instead of going through the generic [signIn].
+  Future<BackupResult<bool>> connectS3({
+    required String endpoint,
+    required String region,
+    required String bucket,
+    required String accessKeyId,
+    required String secretAccessKey,
+    bool pathStyle = true,
+    String? folderName,
+  }) async {
+    try {
+      final result = await s3Service.connect(
+        endpoint: endpoint,
+        region: region,
+        bucket: bucket,
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
+        pathStyle: pathStyle,
+        folderName: folderName,
+      );
+      if (result) _userChangesController.add(UserChangeType.signIn);
+      return BackupResult.success(result);
+    } on exp.AuthException catch (e) {
+      return BackupResult.failure(BackupError.fromException(e));
+    } catch (e) {
+      return BackupResult.failure(
+        BackupError.unknown(
+          'Failed to connect to S3: $e',
+          context: 'connectS3',
+        ),
+      );
+    }
+  }
+
   Stream<BackupSyncMessage> get syncMessages => messenger.messages;
 
   List<BackupCloudService> get services => [
@@ -189,6 +231,7 @@ class BackupRepository {
     ?icloudService,
     dropboxService,
     nextcloudService,
+    s3Service,
   ];
 
   BackupCloudService getService(BackupServiceType serviceType) {

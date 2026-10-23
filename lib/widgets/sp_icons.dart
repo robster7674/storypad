@@ -35,6 +35,8 @@ class SpIcons {
   static const IconData googleDrive = MdiIcons.googleDrive;
   // Self-hosted, so a generic server icon rather than a Nextcloud brand mark.
   static const IconData nextcloud = MdiIcons.server;
+  // Generic storage glyph (not an AWS mark) — S3 is a protocol many providers speak.
+  static const IconData s3 = Icons.storage;
   static const IconData icloud = Icons.cloud;
   // ignore: deprecated_member_use, brand icon deprecated upstream by MDI (trademark), no replacement
   static const IconData dropbox = MdiIcons.dropbox;

@@ -20,6 +20,7 @@ class PreferencesBox extends BaseBox<PreferenceObjectBox, PreferenceDbModel> {
       BackupServiceType.icloud => _DefinedPreference<String>(id: 7, key: 'storage_quota_icloud'),
       BackupServiceType.dropbox => _DefinedPreference<String>(id: 9, key: 'storage_quota_dropbox'),
       BackupServiceType.nextcloud => _DefinedPreference<String>(id: 5, key: 'storage_quota_nextcloud'),
+      BackupServiceType.s3 => _DefinedPreference<String>(id: 11, key: 'storage_quota_s3'),
     };
   }
 
@@ -40,6 +41,10 @@ class PreferencesBox extends BaseBox<PreferenceObjectBox, PreferenceDbModel> {
       BackupServiceType.dropbox => _DefinedPreference<DateTime>(
         id: 10,
         key: 'storage_quota_fetched_at_dropbox',
+      ),
+      BackupServiceType.s3 => _DefinedPreference<DateTime>(
+        id: 12,
+        key: 'storage_quota_fetched_at_s3',
       ),
     };
   }

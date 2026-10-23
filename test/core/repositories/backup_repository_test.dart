@@ -12,6 +12,7 @@ import 'package:storypad/core/services/backups/backup_cloud_service.dart';
 import 'package:storypad/core/services/backups/backup_service_type.dart';
 import 'package:storypad/core/services/backups/dropbox_cloud_service.dart';
 import 'package:storypad/core/services/backups/nextcloud_cloud_service.dart';
+import 'package:storypad/core/services/backups/s3_cloud_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_images_uploader_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_importer_service.dart';
 import 'package:storypad/core/services/backups/sync_steps/backup_latest_checker_service.dart';
@@ -38,6 +39,8 @@ void main() {
       // instance is inert (excluded from checkableServices) without needing a
       // dedicated fake, unlike Nextcloud/iCloud which these tests do assert on.
       dropboxService: DropboxCloudService(),
+      // Same as Dropbox: a never-signed-in instance is inert here.
+      s3Service: S3CloudService(),
       restoreService: RestoreBackupService(),
       messenger: messenger,
       step1ImagesUploader: BackupImagesUploaderService(messenger: messenger),
