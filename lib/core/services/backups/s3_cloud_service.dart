@@ -768,6 +768,17 @@ class S3CloudService extends BackupCloudService {
         );
       }
 
+      // A redirect means the request went to the wrong region/endpoint for
+      // this bucket; the client doesn't follow it, so say so instead of "unexpected".
+      if (status == 301 || code == 'PermanentRedirect' || code == 'AuthorizationHeaderMalformed') {
+        return exp.ServiceException(
+          'The region or endpoint looks wrong for this bucket (during $methodName)',
+          exp.ServiceExceptionType.unexpectedError,
+          context: methodName,
+          serviceType: serviceType,
+        );
+      }
+
       if (status == 507) {
         return exp.QuotaException(
           'Storage quota exceeded during $methodName',

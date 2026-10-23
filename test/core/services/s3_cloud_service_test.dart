@@ -200,7 +200,7 @@ void main() {
     final service = S3CloudService();
 
     test('passes an existing BackupException through untouched', () {
-      final original = QuotaException(
+      const original = QuotaException(
         'full',
         QuotaExceptionType.storageQuotaExceeded,
         serviceType: BackupServiceType.s3,
